@@ -52,8 +52,8 @@ export const removeBackground = async (
     // Initialize the segmentation model
     const segmenter = await pipeline(
       'image-segmentation', 
-      'Xenova/segformer-b0-finetuned-ade-512-512',
-      { quantized: true }
+      'Xenova/segformer-b0-finetuned-ade-512-512'
+      // Remove the quantized property as it's not in the type definition
     );
     
     onProgress?.('Processing image...', 0.3);
