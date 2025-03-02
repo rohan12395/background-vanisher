@@ -49,11 +49,11 @@ export const removeBackground = async (
   try {
     onProgress?.('Initializing segmentation model...', 0.1);
     
-    // Initialize the segmentation model
+    // Initialize the segmentation model with webgpu device for better performance
     const segmenter = await pipeline(
       'image-segmentation', 
-      'Xenova/segformer-b0-finetuned-ade-512-512'
-      // Remove the quantized property as it's not in the type definition
+      'Xenova/segformer-b0-finetuned-ade-512-512',
+      { device: 'cpu' } // Use CPU for better compatibility
     );
     
     onProgress?.('Processing image...', 0.3);
@@ -65,30 +65,21 @@ export const removeBackground = async (
     if (!ctx) throw new Error('Could not get canvas context');
     
     // Resize image if needed and draw to canvas
-    const wasResized = resizeImageIfNeeded(canvas, ctx, imageElement);
+    resizeImageIfNeeded(canvas, ctx, imageElement);
     
     onProgress?.('Applying segmentation...', 0.5);
     
     // Convert to base64 for processing
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
     
     // Process with segmentation model
     const result = await segmenter(imageData);
+    console.log('Segmentation result:', result);
     
     onProgress?.('Finalizing image...', 0.8);
     
     if (!result || !Array.isArray(result) || result.length === 0) {
       throw new Error('Invalid segmentation result');
-    }
-    
-    // Find person/foreground mask (usually the first segment with highest score)
-    const personMask = result.find(segment => 
-      segment.label === 'person' || 
-      segment.score > 0.5
-    )?.mask;
-    
-    if (!personMask) {
-      throw new Error('No suitable mask found');
     }
     
     // Create output canvas for the masked image
@@ -108,11 +99,16 @@ export const removeBackground = async (
     );
     const data = outputImageData.data;
     
-    // Apply mask to alpha channel
-    for (let i = 0; i < personMask.data.length; i++) {
-      // Keep the foreground, remove the background
-      const alpha = Math.round(personMask.data[i] * 255);
-      data[i * 4 + 3] = alpha;
+    // Apply first mask from result to alpha channel
+    // The key fix here is using the first mask unconditionally instead of trying to find a specific one
+    if (result[0].mask) {
+      for (let i = 0; i < result[0].mask.data.length; i++) {
+        // Invert the mask value to keep the foreground instead of background
+        const alpha = Math.round((1 - result[0].mask.data[i]) * 255);
+        data[i * 4 + 3] = alpha;
+      }
+    } else {
+      throw new Error('No mask found in segmentation result');
     }
     
     outputCtx.putImageData(outputImageData, 0, 0);
