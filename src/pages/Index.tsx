@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { removeBackground, loadImage, loadImageFromUrl } from "@/utils/imageProcessor";
@@ -11,9 +10,7 @@ import ImageResult from "@/components/ImageResult";
 import { Button } from "@/components/ui/button";
 import { Github } from "lucide-react";
 
-// Add huggingface dependency
-<lov-add-dependency>@huggingface/transformers@latest</lov-add-dependency>
-<lov-add-dependency>framer-motion@latest</lov-add-dependency>
+// Dependencies are already installed in package.json
 
 const Index = () => {
   const [processedImage, setProcessedImage] = useState<string | null>(null);
